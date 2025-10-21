@@ -1,11 +1,11 @@
 const std = @import("std");
 const mem = std.mem;
-const Table = @import("table.zig");
-const Statement = @import("statement.zig");
+const Table = @import("table.zig").Table;
+const Statement = @import("statement.zig").Statement;
 const database_engine_ii = @import("database_engine_ii");
 
 pub fn main() !void {
-    const gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();
@@ -22,22 +22,31 @@ pub fn main() !void {
     const filename = arguments[1];
 
     // Initialize connection to the database file
-    const table = try Table.init(allocator, filename);
+    var table = try Table.init(allocator, filename);
     defer table.deinit();
 
     // Setup input/output for the REPL
-    const stdin = std.io.getStdIn().reader();
-    const stdout = std.io.getStdOut().writer();
+    var stdin_buffer: [1024]u8 = undefined;
+    var stdin_reader_wrapper = std.fs.File.stdin().reader(&stdin_buffer);
+    var stdin = &stdin_reader_wrapper.interface;
 
-    // Buffer to hold user input
-    const buffer: [256]u8 = undefined;
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_writer_wrapper = std.fs.File.stdout().writer(&stdout_buffer);
+    var stdout = &stdout_writer_wrapper.interface;
 
     // REPL loop
     while (true) {
         try stdout.print("db > ", .{});
 
         // readUntilDelimiterOrEof - Read until Enter key (newline)
-        const input = (try stdin.readUntilDelimiterOrEof(&buffer, '\n')) orelse break;
+        const input = (stdin.takeDelimiterExclusive('\n')) catch |err| switch (err) {
+            error.EndOfStream => break,
+            error.StreamTooLong => {
+                std.debug.print("Input too long\n", .{});
+                continue;
+            },
+            else => return err,
+        };
 
         const trimmed_input = mem.trim(u8, input, &std.ascii.whitespace);
 
@@ -54,7 +63,7 @@ pub fn main() !void {
             }
         }
 
-        const statement = Statement.prepare(trimmed_input) catch |err| {
+        var statement = Statement.prepare(trimmed_input) catch |err| {
             std.debug.print("Error: {}\n", .{err});
             continue;
         };

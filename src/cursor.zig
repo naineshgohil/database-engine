@@ -1,4 +1,4 @@
-const Table = @import("table.zig");
+const Table = @import("table.zig").Table;
 
 // Cursor is a pointer to a specific position in the table
 //

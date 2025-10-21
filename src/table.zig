@@ -1,10 +1,10 @@
 const std = @import("std");
 const mem = std.mem;
-const Pager = @import("pager.zig");
+const Pager = @import("pager.zig").Pager;
 const Row = @import("row.zig");
 
-const PAGE_SIZE = Pager.PAGE_SIZE;
-const MAX_PAGES = Pager.MAX_PAGES;
+const PAGE_SIZE = @import("pager.zig").PAGE_SIZE;
+const MAX_PAGES = @import("pager.zig").MAX_PAGES;
 const ROW_SIZE = Row.ROW_SIZE;
 
 // 4096 / 291 = 13 rows
