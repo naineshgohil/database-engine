@@ -1,7 +1,5 @@
 const std = @import("std");
 const mem = std.mem;
-const Pager = @import("pager.zig");
-const Row = @import("row.zig");
 const Table = @import("table.zig");
 
 // Cursor is a pointer to a specific position in the table
