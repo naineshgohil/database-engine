@@ -25,52 +25,53 @@ pub fn main() !void {
     var table = try Table.init(allocator, filename);
     defer table.deinit();
 
-    // Setup input/output for the REPL
+    // Setup input/output for REPL
     var stdin_buffer: [1024]u8 = undefined;
     var stdin_reader_wrapper = std.fs.File.stdin().reader(&stdin_buffer);
-    var stdin = &stdin_reader_wrapper.interface;
+    const stdin = &stdin_reader_wrapper.interface;
+
+    var line_writer = std.Io.Writer.Allocating.init(allocator);
+    defer line_writer.deinit();
 
     var stdout_buffer: [1024]u8 = undefined;
     var stdout_writer_wrapper = std.fs.File.stdout().writer(&stdout_buffer);
-    var stdout = &stdout_writer_wrapper.interface;
+    const stdout = &stdout_writer_wrapper.interface;
 
-    // REPL loop
-    while (true) {
-        try stdout.print("db > ", .{});
+    try stdout.writeAll("db > ");
+    try stdout.flush();
 
-        // readUntilDelimiterOrEof - Read until Enter key (newline)
-        const input = (stdin.takeDelimiterExclusive('\n')) catch |err| switch (err) {
-            error.EndOfStream => break,
-            error.StreamTooLong => {
-                std.debug.print("Input too long\n", .{});
-                continue;
-            },
-            else => return err,
-        };
+    while (stdin.streamDelimiter(&line_writer.writer, '\n')) |_| {
+        const input = line_writer.written();
 
-        const trimmed_input = mem.trim(u8, input, &std.ascii.whitespace);
+        var input_copy: [256]u8 = undefined;
+        @memcpy(input_copy[0..input.len], input);
+        const trimmed = mem.trim(u8, input_copy[0..input.len], &std.ascii.whitespace);
 
-        if (trimmed_input.len == 0) continue;
+        line_writer.clearRetainingCapacity();
+        stdin.toss(1);
 
-        // Check for meta commands (start with '.')
-        if (trimmed_input[0] == '.') {
-            if (mem.eql(u8, trimmed_input, ".exit")) {
-                std.debug.print("Goodbye!\n", .{});
+        if (trimmed.len == 0) continue;
+
+        if (trimmed[0] == '.') {
+            if (mem.eql(u8, trimmed, ".exit")) {
                 break;
             } else {
-                std.debug.print("Unrecognized command: {s}\n", .{trimmed_input});
-                continue;
+                try stdout.print("Unrecognized command: {s}\n", .{trimmed});
             }
+
+            continue;
         }
 
-        var statement = Statement.prepare(trimmed_input) catch |err| {
-            std.debug.print("Error: {}\n", .{err});
+        var statement = Statement.prepare(trimmed) catch |err| {
+            try stdout.print("Error: {}\n", .{err});
             continue;
         };
 
         statement.execute(&table) catch |err| {
-            std.debug.print("Error: {}\n", .{err});
-            continue;
+            try stdout.print("Error: {}\n", .{err});
         };
-    }
+
+        try stdout.writeAll("db > ");
+        try stdout.flush();
+    } else |err| if (err != error.EndOfStream) return err;
 }
