@@ -25,10 +25,15 @@ pub const Table = struct {
     // Initialize the table from existing data on disk
     pub fn init(allocator: mem.Allocator, filename: []const u8) !Table {
         //
-        const pager = try Pager.init(allocator, filename);
+        var pager = try Pager.init(allocator, filename);
 
         //
-        const num_rows: u32 = @intCast(pager.file_length / ROW_SIZE);
+        var num_rows: u32 = 0;
+
+        if (pager.file_length > 0) {
+            const header_page = try pager.getPage(0);
+            num_rows = mem.readInt(u32, header_page[0..4], .little);
+        }
 
         return Table{
             .pager = pager,
@@ -54,10 +59,11 @@ pub const Table = struct {
 
     // Flush every page to disk and close the file
     pub fn deinit(self: *Table) void {
-        //
-        const num_full_pages = self.num_rows / ROWS_PER_PAGE;
+        // Write num_rows to header before flushing
+        const header_page = self.pager.getPage(0) catch return;
+        mem.writeInt(u32, header_page[0..4], self.num_rows, .little);
 
-        //
+        const num_full_pages = self.num_rows / ROWS_PER_PAGE;
         const num_additional_rows = self.num_rows % ROWS_PER_PAGE;
 
         //

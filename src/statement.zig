@@ -7,6 +7,7 @@ const Cursor = @import("cursor.zig").Cursor;
 const USERNAME_SIZE = @import("row.zig").USERNAME_SIZE;
 const EMAIL_SIZE = @import("row.zig").EMAIL_SIZE;
 const MAX_TABLE_ROWS = @import("table.zig").MAX_TABLE_ROWS;
+const ROWS_PER_PAGE = @import("table.zig").ROWS_PER_PAGE;
 
 // A statement is a parsed database command (INSERT or SELECT)
 // We need to convert user input into executble operations
@@ -88,6 +89,10 @@ fn executeInsert(statement: *Statement, table: *Table) !void {
     row.serialize(slot);
 
     table.num_rows += 1;
+
+    const page_num = cursor.row_num / ROWS_PER_PAGE;
+
+    try table.pager.flush(page_num);
 }
 
 // Display all rows in the table

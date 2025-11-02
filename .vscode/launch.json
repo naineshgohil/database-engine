@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Database-engine (LLDB)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/zig-out/bin/database_engine_ii",
+      "args": ["mydb.db"],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "zig build (debug)",
+      "sourceLanguages": ["zig"],
+      "terminal": "integrated"
+    },
+    {
+      "name": "Debug Database-engine (C++)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/zig-out/bin/database_engine_ii",
+      "args": ["mydb.db"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "lldb",
+      "preLaunchTask": "zig build (debug)"
+    },
+    {
+      "name": "Debug with Args",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/zig-out/bin/database_engine_ii",
+      "args": ["${input:programArgs}"],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "zig build (debug)",
+      "sourceLanguages": ["zig"],
+      "terminal": "integrated"
+    },
+    {
+      "name": "Attach to Process",
+      "type": "lldb",
+      "request": "attach",
+      "pid": "${command:pickProcess}"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "programArgs",
+      "type": "promptString",
+      "description": "Program arguments (space-separated)",
+      "default": ""
+    }
+  ]
+}
